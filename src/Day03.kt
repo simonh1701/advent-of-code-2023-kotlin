@@ -24,19 +24,57 @@ fun main() {
         }.sumOf { matchResult -> matchResult.value.toInt() }
     }
 
-    fun part2(input: List<String>): Int {
-        return input.size
+    fun part2(input: String): Int {
+        val regex = Regex("\\d+")
+        val matchResults = regex.findAll(input)
+
+        val inputLines = input.lines()
+        val inputHeight = inputLines.size
+        val inputWidth = inputLines.first().length
+
+        val mapOfSymbolAtCoordinateToListOfPartNumbers: MutableMap<Pair<Char, Coordinate>, MutableList<Int>> =
+            mutableMapOf()
+
+        matchResults.forEach { matchResult ->
+            val range = matchResult.range
+            val coordinatesOfMatch = range.map { index -> input.indexToCoordinate(index) }
+            val coordinatesToCheck = coordinatesOfMatch.flatMap { coordinate ->
+                coordinate.getAllCoordinatesAround(
+                    inputHeight, inputWidth
+                )
+            }.toSet()
+
+            coordinatesToCheck
+                .map { coordinate: Coordinate -> Pair(input.getCharAtCoordinate(coordinate), coordinate) }
+                .filter { p: Pair<Char, Coordinate> -> !p.first.isDigit() }
+                .filter { p: Pair<Char, Coordinate> -> p.first != '.' }
+                .forEach { symbolAtCoordinate ->
+                    if (mapOfSymbolAtCoordinateToListOfPartNumbers.contains(symbolAtCoordinate)) {
+                        mapOfSymbolAtCoordinateToListOfPartNumbers[symbolAtCoordinate]!!.add(matchResult.value.toInt())
+                    } else {
+                        mapOfSymbolAtCoordinateToListOfPartNumbers[symbolAtCoordinate] =
+                            mutableListOf(matchResult.value.toInt())
+                    }
+                }
+        }
+
+        return mapOfSymbolAtCoordinateToListOfPartNumbers
+            .filter { (symbolAtCoordinate, listOfPartNumbers) ->
+                symbolAtCoordinate.first == '*' && listOfPartNumbers.size == 2
+            }
+            .map { (_, listOfPartNumbers) -> listOfPartNumbers.fold(1) { acc, partNumber -> acc * partNumber } }
+            .sumOf { gearRatio -> gearRatio }
     }
 
     val testInput = readInputAsString("Day03_Test")
     check(allLinesAreEquallyLong(testInput))
     check(part1(testInput) == 4361)
-    // check(part2(testInput) == 0)
+    check(part2(testInput) == 467835)
 
     val input = readInputAsString("Day03")
     check(allLinesAreEquallyLong(input))
     part1(input).println()
-    // part2(input).println()
+    part2(input).println()
 }
 
 fun allLinesAreEquallyLong(input: String): Boolean {
