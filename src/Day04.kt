@@ -1,23 +1,27 @@
 import kotlin.math.pow
 
 fun main() {
+    fun getWinningNumbers(input: List<String>) = input
+        .first()
+        .split(": ")
+        .last()
+        .split(" ")
+        .filterNot { s: String -> s.isEmpty() }
+        .map { s: String -> s.toInt() }
+
+    fun getMyNumbers(input: List<String>) = input
+        .last()
+        .split(" ")
+        .filterNot { s: String -> s.isEmpty() }
+        .map { s: String -> s.toInt() }
+
     fun part1(input: List<String>): Int {
         return input.sumOf { line ->
             val firstSplit = line.split(" | ")
 
-            val winningNumbers = firstSplit
-                .first()
-                .split(": ")
-                .last()
-                .split(" ")
-                .filterNot { s: String -> s.isEmpty() }
-                .map { s: String -> s.toInt() }
+            val winningNumbers = getWinningNumbers(firstSplit)
 
-            val myNumbers = firstSplit
-                .last()
-                .split(" ")
-                .filterNot { s: String -> s.isEmpty() }
-                .map { s: String -> s.toInt() }
+            val myNumbers = getMyNumbers(firstSplit)
 
             val numberOfMatchingNumbers = myNumbers.count { myNumber -> myNumber in winningNumbers }
 
@@ -41,19 +45,9 @@ fun main() {
                     .last()
                     .toInt()
 
-                val winningNumbers = firstSplit
-                    .first()
-                    .split(": ")
-                    .last()
-                    .split(" ")
-                    .filterNot { s: String -> s.isEmpty() }
-                    .map { s: String -> s.toInt() }
+                val winningNumbers = getWinningNumbers(firstSplit)
 
-                val myNumbers = firstSplit
-                    .last()
-                    .split(" ")
-                    .filterNot { s: String -> s.isEmpty() }
-                    .map { s: String -> s.toInt() }
+                val myNumbers = getMyNumbers(firstSplit)
 
                 val numberOfMatchingNumbers = myNumbers.count { myNumber -> myNumber in winningNumbers }
 
