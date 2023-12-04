@@ -29,14 +29,61 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        return input.size
+        val mapOfGameNumberToNumberOfWinningNumbersAndNumberOfCards: MutableMap<Int, Pair<Int, Int>> =
+            input.map { line ->
+                val firstSplit = line.split(" | ")
+
+                val gameNumber = firstSplit
+                    .first()
+                    .split(": ")
+                    .first()
+                    .split(" ")
+                    .last()
+                    .toInt()
+
+                val winningNumbers = firstSplit
+                    .first()
+                    .split(": ")
+                    .last()
+                    .split(" ")
+                    .filterNot { s: String -> s.isEmpty() }
+                    .map { s: String -> s.toInt() }
+
+                val myNumbers = firstSplit
+                    .last()
+                    .split(" ")
+                    .filterNot { s: String -> s.isEmpty() }
+                    .map { s: String -> s.toInt() }
+
+                val numberOfMatchingNumbers = myNumbers.count { myNumber -> myNumber in winningNumbers }
+
+                Pair(gameNumber, Pair(numberOfMatchingNumbers, 1))
+            }.associateBy({ it.first }, { it.second }).toMutableMap()
+
+        for (entry in mapOfGameNumberToNumberOfWinningNumbersAndNumberOfCards) {
+            val numberOfWinningNumbers = entry.value.first
+            val numberOfCards = entry.value.second
+            val currentGameNumber = entry.key
+
+            for (i in currentGameNumber + 1..currentGameNumber + numberOfWinningNumbers) {
+                val pairOfNumberOfWinningNumbersAndNumberOfCards =
+                    mapOfGameNumberToNumberOfWinningNumbersAndNumberOfCards[i]
+
+                pairOfNumberOfWinningNumbersAndNumberOfCards?.let {
+                    mapOfGameNumberToNumberOfWinningNumbersAndNumberOfCards[i] =
+                        it.copy(second = it.second + numberOfCards)
+                }
+            }
+        }
+
+        return mapOfGameNumberToNumberOfWinningNumbersAndNumberOfCards.map { entry -> entry.value.second }.sum()
     }
 
     val testInput = readInput("Day04_Test")
     check(part1(testInput) == 13)
-    // check(part2(testInput) == 0)
+    check(part2(testInput) == 30)
 
     val input = readInput("Day04")
     part1(input).println()
-    // part2(input).println()
+    part2(input).println()
 }
