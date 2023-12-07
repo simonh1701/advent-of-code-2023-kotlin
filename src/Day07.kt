@@ -1,34 +1,5 @@
 fun main() {
-    fun part1(input: List<String>): Int {
-        val hands = input.map { line ->
-            val lineSplit = line.split(" ")
-            val handString = lineSplit[0]
-            val bet = lineSplit[1].toInt()
-            Hand(handString, bet)
-        }
-
-        return hands.sorted().foldIndexed(0) { index, acc, hand ->
-            acc + (hand.bet * (index + 1))
-        }
-    }
-
-    fun part2(input: List<String>): Int {
-        return input.size
-    }
-
-    val testInput = readInput("Day07_Test")
-    check(part1(testInput) == 6440)
-    // check(part2(testInput) == 0)
-
-    val input = readInput("Day07")
-    part1(input).println()
-    // part2(input).println()
-}
-
-data class Hand(val handString: String, val bet: Int) : Comparable<Hand> {
-    private val type: HandType
-    private val charList = handString.toCharArray().toList()
-    private val cardsToOrder: Map<Char, Int> = mapOf(
+    val cardsToOrder: Map<Char, Int> = mapOf(
         'A' to 14,
         'K' to 13,
         'Q' to 12,
@@ -43,6 +14,68 @@ data class Hand(val handString: String, val bet: Int) : Comparable<Hand> {
         '3' to 3,
         '2' to 2
     )
+
+    val cardsToOrderForPart2: Map<Char, Int> = cardsToOrder.plus('J' to 1)
+
+    fun part1(input: List<String>): Int {
+        val hands = input.map { line ->
+            val lineSplit = line.split(" ")
+            val handString = lineSplit[0]
+            val bet = lineSplit[1].toInt()
+            Hand(handString, bet, cardsToOrder)
+        }
+
+        return hands.sorted().foldIndexed(0) { index, acc, hand ->
+            acc + (hand.bet * (index + 1))
+        }
+    }
+
+    fun part2(input: List<String>): Int {
+        val hands = input.map { line ->
+            val lineSplit = line.split(" ")
+            val handString = lineSplit[0]
+            val bet = lineSplit[1].toInt()
+            HandForPart2(handString, bet, cardsToOrderForPart2)
+        }
+
+        return hands.sorted().foldIndexed(0) { index, acc, hand ->
+            acc + (hand.bet * (index + 1))
+        }
+    }
+
+    val testInput = readInput("Day07_Test")
+    check(part1(testInput) == 6440)
+    check(part2(testInput) == 5905)
+
+    val input = readInput("Day07")
+    part1(input).println()
+    part2(input).println()
+}
+
+abstract class BaseHand() : Comparable<BaseHand> {
+    abstract val handString: String
+    abstract val bet: Int
+    abstract val cardsToOrder: Map<Char, Int>
+    abstract val charList: List<Char>
+    lateinit var type: HandType
+
+    override fun compareTo(other: BaseHand): Int {
+        val differenceInStrength = this.type.strength - other.type.strength
+        if (differenceInStrength != 0) return differenceInStrength
+
+        val charOrderList = this.charList.mapNotNull { cardsToOrder[it] }
+        val otherCharOrderList = other.charList.mapNotNull { cardsToOrder[it] }
+        check(charOrderList.size == otherCharOrderList.size)
+        val differencesOfCardOrdersAtEachPosition =
+            charOrderList.zip(otherCharOrderList).map { pair -> pair.first - pair.second }
+
+        return differencesOfCardOrdersAtEachPosition.firstOrNull { it != 0 } ?: 0
+    }
+}
+
+data class Hand(override val handString: String, override val bet: Int, override val cardsToOrder: Map<Char, Int>) :
+    BaseHand() {
+    override val charList: List<Char> = this.handString.toCharArray().toList()
 
     init {
         check(charList.size == 5)
@@ -59,18 +92,31 @@ data class Hand(val handString: String, val bet: Int) : Comparable<Hand> {
             else -> HandType.HIGH_CARD
         }
     }
+}
 
-    override fun compareTo(other: Hand): Int {
-        val differenceInStrength = this.type.strength - other.type.strength
-        if (differenceInStrength != 0) return differenceInStrength
+data class HandForPart2(
+    override val handString: String, override val bet: Int, override val cardsToOrder: Map<Char, Int>
+) : BaseHand() {
+    override val charList = handString.toCharArray().toList()
 
-        val charOrderList = this.charList.mapNotNull { cardsToOrder[it] }
-        val otherCharOrderList = other.charList.mapNotNull { cardsToOrder[it] }
-        check(charOrderList.size == otherCharOrderList.size)
-        val differencesOfCardOrdersAtEachPosition =
-            charOrderList.zip(otherCharOrderList).map { pair -> pair.first - pair.second }
+    init {
+        check(charList.size == 5)
 
-        return differencesOfCardOrdersAtEachPosition.firstOrNull { it != 0 } ?: 0
+        val mapOfCardToCardCount: MutableMap<Char, Int> =
+            charList.groupBy { it }.mapValues { entry -> entry.value.count() }.toMutableMap()
+
+        val numberOfJays = mapOfCardToCardCount.getOrDefault('J', 0)
+        mapOfCardToCardCount.remove('J')
+        val cardToCardCountSorted =
+            mapOfCardToCardCount.entries.sortedByDescending { it.value }.map { mutableEntry -> mutableEntry.value }
+
+        type = when (cardToCardCountSorted.getOrElse(0) { 0 } + numberOfJays) {
+            5 -> HandType.FIVE_OF_A_KIND
+            4 -> HandType.FOUR_OF_A_KIND
+            3 -> if (cardToCardCountSorted[1] == 2) HandType.FULL_HOUSE else HandType.THREE_OF_A_KIND
+            2 -> if (cardToCardCountSorted[1] == 2) HandType.TWO_PAIR else HandType.ONE_PAIR
+            else -> HandType.HIGH_CARD
+        }
     }
 }
 
