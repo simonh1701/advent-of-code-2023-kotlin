@@ -19,8 +19,59 @@ fun main() {
         return steps / 2
     }
 
-    fun part2(input: List<String>): Int {
-        return input.size
+    fun part2(input: String): Int {
+        var landscapeMap = input
+        val regex = Regex("S")
+        val matchResult = regex.find(landscapeMap)!!
+        val coordinateOfStart = landscapeMap.indexToLandscapeCoordinate(matchResult.range.first)
+        var previousField: Field?
+        var currentField: Field?
+
+        previousField = MoveDirection.values().firstNotNullOfOrNull { startDirection ->
+            previousField = Field.create(landscapeMap, coordinateOfStart, startDirection)
+            if (previousField!!.hasNext() && previousField!!.next().hasNext()) previousField
+            else null
+        }
+
+        currentField = previousField!!.next()
+
+        landscapeMap = when (currentField!!.direction) {
+            MoveDirection.NORTH -> landscapeMap.replaceCharAtLandscapeCoordinate(currentField!!.coordinate, '(')
+            MoveDirection.SOUTH -> landscapeMap.replaceCharAtLandscapeCoordinate(previousField!!.coordinate, ')')
+            MoveDirection.WEST -> landscapeMap.replaceCharAtLandscapeCoordinate(previousField!!.coordinate, 'X')
+            MoveDirection.EAST -> landscapeMap.replaceCharAtLandscapeCoordinate(currentField!!.coordinate, 'X')
+        }
+
+        var steps = 1
+
+        while (currentField !is Start) {
+            previousField = currentField
+            currentField = previousField!!.next()
+
+            landscapeMap = landscapeMap.replaceCharAtLandscapeCoordinate(currentField!!.coordinate, 'X')
+
+            if (currentField!!.direction == MoveDirection.NORTH) landscapeMap = landscapeMap.replaceCharAtLandscapeCoordinate(currentField!!.coordinate, '(')
+            else if (currentField!!.direction == MoveDirection.SOUTH) landscapeMap = landscapeMap.replaceCharAtLandscapeCoordinate(previousField!!.coordinate, ')')
+
+            steps++
+        }
+
+        return landscapeMap.lines().sumOf { line ->
+            line.mapIndexed { index, c ->
+                if (c == 'X' || c == '(' || c == ')') {
+                    false
+                } else {
+                    val substringBefore = line.substring(0, index)
+                    val substringAfter = line.substring(index + 1, line.length)
+
+                    val parenthesisBefore = substringBefore.filter { it == '(' || it == ')' }
+                    val parenthesisAfter = substringAfter.filter { it == '(' || it == ')' }
+
+                    if (parenthesisBefore.isEmpty() || parenthesisAfter.isEmpty()) false
+                    else parenthesisBefore.last() == '(' && parenthesisAfter.first() == ')'
+                }
+            }.count { it }
+        }
     }
 
     val testInput1 = readInputAsString("Day10_Test1")
@@ -29,12 +80,14 @@ fun main() {
     check(allLinesAreEquallyLong(testInput2))
     check(part1(testInput1) == 4)
     check(part1(testInput2) == 8)
-    // check(part2(testInput) == 0)
+    val testInput3 = readInputAsString("Day10_Test3")
+    check(allLinesAreEquallyLong(testInput3))
+    check(part2(testInput3) == 10)
 
     val input = readInputAsString("Day10")
     check(allLinesAreEquallyLong(input))
     part1(input).println()
-    // part2(input).println()
+    part2(input).println()
 }
 
 data class LandscapeCoordinate(val row: Int, val col: Int)
@@ -53,6 +106,14 @@ fun String.getCharAtLandscapeCoordinate(landscapeCoordinate: LandscapeCoordinate
     val stringLines = this.split("\n")
 
     return stringLines[landscapeCoordinate.row].elementAt(landscapeCoordinate.col)
+}
+
+fun String.replaceCharAtLandscapeCoordinate(landscapeCoordinate: LandscapeCoordinate, newChar: Char): String {
+    val stringLineLength = this.split("\n").first().length + 1
+
+    val startRange = landscapeCoordinate.row * stringLineLength + landscapeCoordinate.col
+
+    return replaceRange(startRange..startRange, newChar.toString())
 }
 
 enum class MoveDirection {
@@ -215,6 +276,24 @@ data class Start(override val landscapeMap: String, override val coordinate: Lan
     }
 
     override fun hasNext(): Boolean {
-        return true
+        val inputLines = landscapeMap.lines()
+        val inputHeight = inputLines.size
+        val inputWidth = inputLines.first().length
+
+        val newRow = when (direction) {
+            MoveDirection.NORTH -> coordinate.row - 1
+            MoveDirection.EAST -> coordinate.row
+            MoveDirection.SOUTH -> coordinate.row + 1
+            MoveDirection.WEST -> coordinate.row
+        }
+
+        val newCol = when (direction) {
+            MoveDirection.NORTH -> coordinate.col
+            MoveDirection.EAST -> coordinate.col + 1
+            MoveDirection.SOUTH -> coordinate.col
+            MoveDirection.WEST -> coordinate.col - 1
+        }
+
+        return !(newRow < 0 || newRow >= inputHeight || newCol < 0 || newCol >= inputWidth)
     }
 }
